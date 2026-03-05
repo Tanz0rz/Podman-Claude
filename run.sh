@@ -17,6 +17,15 @@ fi
 
 echo "Using container runtime: $RUNTIME"
 
+# Health check: restart podman machine if socket is unresponsive
+if [ "$RUNTIME" = "podman" ]; then
+  if ! timeout 5 podman info &>/dev/null; then
+    echo "Podman VM unresponsive, restarting..."
+    podman machine stop 2>/dev/null || true
+    podman machine start
+  fi
+fi
+
 # Build if image doesn't exist
 if ! $RUNTIME image exists "$IMAGE_NAME" 2>/dev/null; then
   echo "Building image..."
