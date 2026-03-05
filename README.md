@@ -21,7 +21,7 @@ podman machine start
 ## Setup
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/Tanz0rz/Podman-Claude.git
 cd Podman-Claude
 chmod +x run.sh
 ```
