@@ -18,7 +18,7 @@ Pick your OS:
 
 ## How it works
 
-- **Containerfile** — Debian-based image with Node.js 22, Claude Code native binary, and common dev tools (git, curl, jq, python3, build-essential)
+- **Containerfile** — Debian-based image with Node.js 22, Claude Code CLI, gh CLI, and common dev tools (git, curl, jq, python3, build-essential)
 - **run.sh / run.bat** — Builds the image, creates a persistent volume, and runs the container with your project mounted at `/workspace`. Each OS directory has its own run script.
 - **Named volume** (`claude-home`) — Persists `/home/claude` across runs, including auth tokens, settings, memory, and history
 - **Project mount** — Your current directory is bind-mounted to `/workspace/<project>` so Claude can read and edit your code
@@ -34,13 +34,13 @@ Pick your OS:
 
 ## What's shared
 
-- **Git config** — Mounted read-only so commits use your identity
-- **SSH keys** — Mounted read-only for private repo access
+- **Git config** — Copied from host at startup so commits use your identity
+- **SSH keys** — Copied from host at startup for private repo access
 - **Project directory** — Read-write mount of your current directory
 
 ## Managing dependencies
 
-The container comes with common dev tools (git, curl, jq, python3, build-essential). When Claude needs something else, there are three approaches:
+The container comes with common dev tools (git, curl, jq, python3, build-essential). When Claude needs something else, there are two approaches:
 
 ### 1. Add to the Containerfile (permanent)
 
@@ -51,11 +51,7 @@ docker rmi claude-code
 cclaude  # rebuilds with new packages
 ```
 
-### 2. Let Claude install at runtime (per-session)
-
-Claude has passwordless sudo inside the container, so it can `sudo apt-get install -y <package>` during a session. These installs are lost when the session ends (`--rm` flag), so this is best for one-off experiments.
-
-### 3. Install to the named volume (persistent, no rebuild)
+### 2. Install to the named volume (persistent, no rebuild)
 
 Tools installed to `/home/claude` (the named volume) persist across sessions. For example, Claude could install Go without a rebuild:
 
@@ -65,8 +61,6 @@ echo 'export PATH=$HOME/.local/go/bin:$PATH' >> ~/.bashrc
 ```
 
 This works for any tool that supports user-level installation (pip, cargo, npm globals, language version managers, etc.).
-
-> **Note:** sudo inside the container is safe — `--cap-drop=ALL` and `--security-opt=no-new-privileges` prevent privilege escalation beyond the container.
 
 ## Updating Claude Code
 
