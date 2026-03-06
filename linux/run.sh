@@ -53,6 +53,7 @@ WORKSPACE_PATH="/workspace/$PROJECT_NAME"
 HOST_MOUNTS=()
 [ -f "$HOME/.gitconfig" ] && HOST_MOUNTS+=(-v "$HOME/.gitconfig:/home/claude/.gitconfig:ro")
 [ -d "$HOME/.ssh" ] && HOST_MOUNTS+=(-v "$HOME/.ssh:/home/claude/.ssh:ro")
+[ -d "${XDG_CONFIG_HOME:-$HOME/.config}/gh" ] && HOST_MOUNTS+=(-v "${XDG_CONFIG_HOME:-$HOME/.config}/gh:/home/claude/.config/gh:ro")
 
 $RUNTIME run --rm -it \
   --network=bridge \
