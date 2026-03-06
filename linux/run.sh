@@ -3,7 +3,7 @@ set -euo pipefail
 
 IMAGE_NAME="claude-code"
 VOLUME_NAME="claude-home"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Prefer docker, fall back to podman
 if command -v docker &>/dev/null; then
@@ -17,23 +17,21 @@ fi
 
 echo "Using container runtime: $RUNTIME"
 
-# Health check: restart podman machine if socket is unresponsive
-if [ "$RUNTIME" = "podman" ]; then
-  if ! timeout 5 podman info &>/dev/null; then
-    echo "Podman VM unresponsive, restarting..."
-    podman machine stop 2>/dev/null || true
-    podman machine start
-  fi
+# Check that the daemon is reachable
+if ! $RUNTIME info &>/dev/null; then
+  echo "Error: $RUNTIME was found but the daemon is not running." >&2
+  echo "Please start the $RUNTIME service and try again." >&2
+  exit 1
 fi
 
 # Build if image doesn't exist
-if ! $RUNTIME image exists "$IMAGE_NAME" 2>/dev/null; then
+if ! $RUNTIME image inspect "$IMAGE_NAME" &>/dev/null; then
   echo "Building image..."
   $RUNTIME build -t "$IMAGE_NAME" -f "$SCRIPT_DIR/Containerfile" "$SCRIPT_DIR"
 fi
 
 # Create persistent volume for claude home if it doesn't exist
-if ! $RUNTIME volume exists "$VOLUME_NAME" 2>/dev/null; then
+if ! $RUNTIME volume inspect "$VOLUME_NAME" &>/dev/null; then
   echo "Creating persistent volume '$VOLUME_NAME'..."
   echo "You will need to run '/login' on first launch to authenticate."
   $RUNTIME volume create "$VOLUME_NAME"

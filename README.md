@@ -6,78 +6,22 @@ Run [Claude Code](https://claude.ai) in a container with `--dangerously-skip-per
 
 Running Claude Code with `--dangerously-skip-permissions` gives the AI agent full autonomy but also full access to your system. A container restricts it to only the mounted project directory — Claude can't touch anything else on your host.
 
-## Prerequisites
+## Quick start
 
-Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (recommended) or Podman.
+Pick your OS:
 
-**Docker:**
-```bash
-brew install --cask docker
-```
-
-**Podman (alternative):**
-```bash
-brew install podman
-podman machine init --memory 8192
-podman machine start
-```
-
-> **Note on Podman:** Podman's VM on macOS has known issues with socket freezes, requiring periodic `podman machine stop && podman machine start`. The run script includes an automatic health check for this, but Docker is more reliable on macOS. Podman's default 2GB VM memory is also insufficient — 8GB minimum is required.
-
-## Setup
-
-```bash
-git clone https://github.com/Tanz0rz/Docker-Claude.git
-cd Docker-Claude
-chmod +x run.sh
-```
-
-## Usage
-
-From any project directory:
-
-```bash
-~/path/to/Docker-Claude/run.sh
-```
-
-On first run, the script will:
-1. Build the container image (takes a few minutes)
-2. Create a persistent `claude-home` volume
-3. Launch Claude Code
-
-**You must run `/login` inside the container on first launch.** Auth persists in the named volume across all future sessions.
-
-### Pass arguments to Claude
-
-```bash
-./run.sh -p "fix the failing tests"
-./run.sh --resume
-```
-
-### Alias (optional)
-
-Add to your `~/.zshrc` or `~/.bashrc`:
-
-```bash
-alias cclaude="$HOME/path/to/Docker-Claude/run.sh"
-```
-
-Then use `cclaude` from any project directory.
-
-## Migrating from native Claude Code
-
-Switching to the containerized approach starts with a fresh `~/.claude` inside the named volume. **Your existing project memories (`MEMORY.md` files) will not carry over automatically.**
-
-Your host memories are stored in `~/.claude/projects/` with paths like `-Users-you-projects-myapp/memory/MEMORY.md`. The container uses a different path scheme based on the mount point: `-workspace-myapp/memory/MEMORY.md`.
-
-To preserve your memories, you need to copy them from your host's `~/.claude/projects/` into the `claude-home` Docker volume, renaming the project directories to match the container's `-workspace-<project>` format. The `<project>` portion is the basename of the directory you run `cclaude` from.
+| OS | Guide | Script |
+|---|---|---|
+| [macOS](macos/) | [macos/README.md](macos/README.md) | `run.sh` |
+| [Linux](linux/) | [linux/README.md](linux/README.md) | `run.sh` |
+| [Windows](windows/) | [windows/README.md](windows/README.md) | `run.bat` |
 
 ## How it works
 
 - **Containerfile** — Debian-based image with Node.js 22, Claude Code native binary, and common dev tools (git, curl, jq, python3, build-essential)
-- **run.sh** — Builds the image, creates a persistent volume, and runs the container with your project mounted at `/workspace`. Auto-detects Docker or Podman.
+- **run.sh / run.bat** — Builds the image, creates a persistent volume, and runs the container with your project mounted at `/workspace`. Each OS directory has its own run script.
 - **Named volume** (`claude-home`) — Persists `/home/claude` across runs, including auth tokens, settings, memory, and history
-- **Project mount** — `$(pwd)` is bind-mounted to `/workspace` so Claude can read and edit your code
+- **Project mount** — Your current directory is bind-mounted to `/workspace/<project>` so Claude can read and edit your code
 
 ## What's isolated
 
@@ -90,8 +34,8 @@ To preserve your memories, you need to copy them from your host's `~/.claude/pro
 
 ## What's shared
 
-- **Git config** — `~/.gitconfig` mounted read-only so commits use your identity
-- **SSH keys** — `~/.ssh` mounted read-only for private repo access
+- **Git config** — Mounted read-only so commits use your identity
+- **SSH keys** — Mounted read-only for private repo access
 - **Project directory** — Read-write mount of your current directory
 
 ## Managing dependencies
@@ -102,7 +46,7 @@ The container comes with common dev tools (git, curl, jq, python3, build-essenti
 
 For tools you always need, add them to the `apt-get install` line in the Containerfile and rebuild:
 
-```bash
+```
 docker rmi claude-code
 cclaude  # rebuilds with new packages
 ```
@@ -128,18 +72,15 @@ This works for any tool that supports user-level installation (pip, cargo, npm g
 
 The Claude Code binary is baked into the image. To update:
 
-```bash
+```
 docker rmi claude-code
 cclaude  # rebuilds automatically
 ```
 
-## Docker vs Podman
+## Migrating from native Claude Code
 
-The run script auto-detects the runtime, preferring Docker. Both work, with trade-offs:
+Switching to the containerized approach starts with a fresh `~/.claude` inside the named volume. **Your existing project memories (`MEMORY.md` files) will not carry over automatically.**
 
-| | Docker | Podman |
-|---|---|---|
-| macOS stability | Reliable | VM socket freezes (auto-recovered by script) |
-| Daemon | `dockerd` runs as root | Daemonless |
-| Rootless | Requires extra setup | Default |
-| Security hardening | `--cap-drop=ALL --security-opt=no-new-privileges` | `--userns=keep-id` |
+Your host memories are stored in `~/.claude/projects/` with paths like `-Users-you-projects-myapp/memory/MEMORY.md`. The container uses a different path scheme based on the mount point: `-workspace-myapp/memory/MEMORY.md`.
+
+To preserve your memories, copy them from your host's `~/.claude/projects/` into the `claude-home` Docker volume, renaming the project directories to match the container's `-workspace-<project>` format. The `<project>` portion is the basename of the directory you run the script from.
