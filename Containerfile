@@ -25,7 +25,9 @@ RUN useradd -m -s /bin/bash claude \
   && echo "claude ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/claude
 
 # Trust all /workspace paths so mounted repos work regardless of UID mismatch
-RUN git config --system --add safe.directory '*'
+# Use gh CLI as git credential helper (host gh config is mounted read-only)
+RUN git config --system --add safe.directory '*' \
+  && git config --system credential.helper '!gh auth git-credential'
 
 USER claude
 
