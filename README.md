@@ -68,27 +68,9 @@ Then use `cclaude` from any project directory.
 
 Switching to the containerized approach starts with a fresh `~/.claude` inside the named volume. **Your existing project memories (`MEMORY.md` files) will not carry over automatically.**
 
-To migrate them, copy your host memories into the volume and rename them to match the container's path scheme. Host paths like `-Users-you-projects-myapp` become `-workspace-myapp` in the container:
+Your host memories are stored in `~/.claude/projects/` with paths like `-Users-you-projects-myapp/memory/MEMORY.md`. The container uses a different path scheme based on the mount point: `-workspace-myapp/memory/MEMORY.md`.
 
-```bash
-docker run --rm \
-  -v claude-home:/home/claude \
-  -v "$HOME/.claude/projects:/host-projects:ro" \
-  node:22-slim \
-  bash -c '
-    mkdir -p /home/claude/.claude/projects
-    for dir in /host-projects/-Users-*; do
-      [ -d "$dir/memory" ] || continue
-      project=$(basename "$dir" | rev | cut -d- -f1 | rev)
-      target="/home/claude/.claude/projects/-workspace-$project/memory"
-      mkdir -p "$target"
-      cp -r "$dir/memory/." "$target/"
-      echo "Migrated: $project"
-    done
-  '
-```
-
-> **Note:** This simple migration uses the last path segment as the project name. If you have projects with multi-segment names (e.g. `grafana-dashboard`), verify the results and manually rename any that were truncated.
+To preserve your memories, you need to copy them from your host's `~/.claude/projects/` into the `claude-home` Docker volume, renaming the project directories to match the container's `-workspace-<project>` format. The `<project>` portion is the basename of the directory you run `cclaude` from.
 
 ## How it works
 
