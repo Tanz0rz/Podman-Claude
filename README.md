@@ -27,8 +27,8 @@ podman machine start
 ## Setup
 
 ```bash
-git clone https://github.com/Tanz0rz/Podman-Claude.git
-cd Podman-Claude
+git clone https://github.com/Tanz0rz/Docker-Claude.git
+cd Docker-Claude
 chmod +x run.sh
 ```
 
@@ -37,7 +37,7 @@ chmod +x run.sh
 From any project directory:
 
 ```bash
-~/path/to/Podman-Claude/run.sh
+~/path/to/Docker-Claude/run.sh
 ```
 
 On first run, the script will:
@@ -59,10 +59,36 @@ On first run, the script will:
 Add to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-alias cclaude="$HOME/path/to/Podman-Claude/run.sh"
+alias cclaude="$HOME/path/to/Docker-Claude/run.sh"
 ```
 
 Then use `cclaude` from any project directory.
+
+## Migrating from native Claude Code
+
+Switching to the containerized approach starts with a fresh `~/.claude` inside the named volume. **Your existing project memories (`MEMORY.md` files) will not carry over automatically.**
+
+To migrate them, copy your host memories into the volume and rename them to match the container's path scheme. Host paths like `-Users-you-projects-myapp` become `-workspace-myapp` in the container:
+
+```bash
+docker run --rm \
+  -v claude-home:/home/claude \
+  -v "$HOME/.claude/projects:/host-projects:ro" \
+  node:22-slim \
+  bash -c '
+    mkdir -p /home/claude/.claude/projects
+    for dir in /host-projects/-Users-*; do
+      [ -d "$dir/memory" ] || continue
+      project=$(basename "$dir" | rev | cut -d- -f1 | rev)
+      target="/home/claude/.claude/projects/-workspace-$project/memory"
+      mkdir -p "$target"
+      cp -r "$dir/memory/." "$target/"
+      echo "Migrated: $project"
+    done
+  '
+```
+
+> **Note:** This simple migration uses the last path segment as the project name. If you have projects with multi-segment names (e.g. `grafana-dashboard`), verify the results and manually rename any that were truncated.
 
 ## How it works
 
