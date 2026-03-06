@@ -47,6 +47,10 @@ else
   RUNTIME_FLAGS+=(--cap-drop=ALL --security-opt=no-new-privileges)
 fi
 
+# Derive a unique workspace path from the host directory name
+PROJECT_NAME="$(basename "$(pwd)")"
+WORKSPACE_PATH="/workspace/$PROJECT_NAME"
+
 # Mount host config (read-only)
 HOST_MOUNTS=()
 [ -f "$HOME/.gitconfig" ] && HOST_MOUNTS+=(-v "$HOME/.gitconfig:/home/claude/.gitconfig:ro")
@@ -54,9 +58,10 @@ HOST_MOUNTS=()
 
 $RUNTIME run --rm -it \
   --network=bridge \
+  -w "$WORKSPACE_PATH" \
   "${RUNTIME_FLAGS[@]}" \
   ${HOST_MOUNTS[@]+"${HOST_MOUNTS[@]}"} \
   -v "$VOLUME_NAME:/home/claude" \
-  -v "$(pwd):/workspace" \
+  -v "$(pwd):$WORKSPACE_PATH" \
   "$IMAGE_NAME" \
   "$@"
