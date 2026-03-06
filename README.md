@@ -71,6 +71,30 @@ docker rmi claude-code
 cclaude  # rebuilds automatically
 ```
 
+## Security model
+
+The container significantly reduces the blast radius of `--dangerously-skip-permissions`, but it is not a perfect sandbox. Understand what is and isn't protected:
+
+### What's protected
+
+- **Host filesystem** — only your project directory is mounted; the rest of your filesystem is inaccessible
+- **Privilege escalation** — all Linux capabilities are dropped (`--cap-drop=ALL`, `--security-opt=no-new-privileges`)
+- **Host processes** — the container has no visibility into host processes
+- **Docker socket** — not mounted, so the container cannot spawn sibling containers
+
+### What a rogue agent could do
+
+- **Modify or delete your project files** — the project directory is mounted read-write, so anything in the directory you launch from is fully accessible
+- **Read your SSH keys and Git config** — these are mounted read-only, but a rogue agent could still read them and exfiltrate them over the network
+- **Read your GitHub CLI tokens** — the `gh` config directory is mounted read-only for the same reason
+- **Make network requests** — outbound network access is required for the Claude API but also means the container can reach arbitrary endpoints
+
+### Hardening tips
+
+- **Mount the project read-only** for review-only sessions: change the project mount in your run script to `"$(pwd):$WORKSPACE_PATH:ro"`
+- **Skip SSH/GH mounts** if you don't need private repo access: remove or comment out the `HOST_MOUNTS` lines in your run script
+- **Commit before launching** so you can easily revert any unwanted changes with `git checkout .`
+
 ## Migrating from native Claude Code
 
 Switching to the containerized approach starts with a fresh `~/.claude` inside the named volume. **Your existing project memories (`MEMORY.md` files) will not carry over automatically.**
