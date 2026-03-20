@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     openssh-client \
     gpg \
+    gosu \
   && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
@@ -18,19 +19,20 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
   && apt-get update && apt-get install -y --no-install-recommends gh \
   && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -s /bin/bash claude
+RUN userdel -r node && useradd -m -s /bin/bash -u 1000 claude
 
 # Trust all /workspace paths so mounted repos work regardless of UID mismatch
 # Use gh CLI as git credential helper (host gh config is mounted read-only)
 RUN git config --system --add safe.directory '*' \
   && git config --system credential.helper '!gh auth git-credential'
 
-COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
-
 USER claude
 
 RUN curl -fsSL https://claude.ai/install.sh | bash
 ENV PATH="/home/claude/.local/bin:${PATH}"
+
+USER root
+COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
 WORKDIR /workspace
 

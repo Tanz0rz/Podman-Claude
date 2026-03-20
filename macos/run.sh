@@ -68,6 +68,11 @@ HOST_MOUNTS=()
 [ -d "$HOME/.ssh" ] && HOST_MOUNTS+=(-v "$HOME/.ssh:/tmp/.host-ssh:ro")
 [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/gh" ] && HOST_MOUNTS+=(-v "${XDG_CONFIG_HOME:-$HOME/.config}/gh:/home/claude/.config/gh:ro")
 
+# Ensure host credentials file exists for the shared read-write mount
+mkdir -p "$HOME/.claude"
+[ ! -f "$HOME/.claude/.credentials.json" ] && echo '{}' > "$HOME/.claude/.credentials.json"
+HOST_MOUNTS+=(-v "$HOME/.claude/.credentials.json:/tmp/.host-credentials.json")
+
 $RUNTIME run --rm -it \
   --network=bridge \
   -w "$WORKSPACE_PATH" \

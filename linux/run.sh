@@ -42,7 +42,7 @@ RUNTIME_FLAGS=()
 if [ "$RUNTIME" = "podman" ]; then
   RUNTIME_FLAGS+=(--userns=keep-id)
 else
-  RUNTIME_FLAGS+=(--cap-drop=ALL --security-opt=no-new-privileges)
+  RUNTIME_FLAGS+=(--cap-drop=ALL --cap-add=CHOWN --cap-add=FOWNER --cap-add=SETUID --cap-add=SETGID --cap-add=DAC_OVERRIDE)
 fi
 
 # Derive a unique workspace path from the host directory name
@@ -53,12 +53,23 @@ WORKSPACE_PATH="/workspace/$PROJECT_NAME"
 HOST_MOUNTS=()
 [ -f "$HOME/.gitconfig" ] && HOST_MOUNTS+=(-v "$HOME/.gitconfig:/tmp/.host-gitconfig:ro")
 [ -d "$HOME/.ssh" ] && HOST_MOUNTS+=(-v "$HOME/.ssh:/tmp/.host-ssh:ro")
+# Ensure host credentials file exists for the shared read-write mount
+mkdir -p "$HOME/.claude"
+[ ! -f "$HOME/.claude/.credentials.json" ] && echo '{}' > "$HOME/.claude/.credentials.json"
+HOST_MOUNTS+=(-v "$HOME/.claude/.credentials.json:/tmp/.host-credentials.json")
 [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/gh" ] && HOST_MOUNTS+=(-v "${XDG_CONFIG_HOME:-$HOME/.config}/gh:/home/claude/.config/gh:ro")
+
+# Pass auth environment variables into the container
+ENV_FLAGS=()
+[ -n "${ANTHROPIC_API_KEY:-}" ] && ENV_FLAGS+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
+[ -n "${CLAUDE_CODE_USE_BEDROCK:-}" ] && ENV_FLAGS+=(-e "CLAUDE_CODE_USE_BEDROCK=$CLAUDE_CODE_USE_BEDROCK")
+[ -n "${CLAUDE_CODE_USE_VERTEX:-}" ] && ENV_FLAGS+=(-e "CLAUDE_CODE_USE_VERTEX=$CLAUDE_CODE_USE_VERTEX")
 
 $RUNTIME run --rm -it \
   --network=bridge \
   -w "$WORKSPACE_PATH" \
   "${RUNTIME_FLAGS[@]}" \
+  ${ENV_FLAGS[@]+"${ENV_FLAGS[@]}"} \
   ${HOST_MOUNTS[@]+"${HOST_MOUNTS[@]}"} \
   -v "$VOLUME_NAME:/home/claude" \
   -v "$(pwd):$WORKSPACE_PATH" \

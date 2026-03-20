@@ -47,6 +47,11 @@ if exist "%USERPROFILE%\.gitconfig" set HOST_MOUNTS=-v %USERPROFILE%\.gitconfig:
 if exist "%USERPROFILE%\.ssh" set HOST_MOUNTS=!HOST_MOUNTS! -v %USERPROFILE%\.ssh:/tmp/.host-ssh:ro
 if exist "%APPDATA%\GitHub CLI" set HOST_MOUNTS=!HOST_MOUNTS! -v "%APPDATA%\GitHub CLI:/home/claude/.config/gh:ro"
 
+REM Ensure credentials file exists for the shared read-write mount
+if not exist "%USERPROFILE%\.claude" mkdir "%USERPROFILE%\.claude"
+if not exist "%USERPROFILE%\.claude\.credentials.json" echo {}> "%USERPROFILE%\.claude\.credentials.json"
+set HOST_MOUNTS=!HOST_MOUNTS! -v "%USERPROFILE%\.claude\.credentials.json:/tmp/.host-credentials.json"
+
 REM Runtime-specific flags
 if "%RUNTIME%"=="podman" (
     set RUNTIME_FLAGS=--userns=keep-id
